@@ -4,15 +4,13 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{431854FD-D9C2-479C-8BCC-B7DA30CC94FF}</ProjectGuid>
+    <ProjectGuid>{DC6C32A2-23EA-45E6-B954-CD3D229B9BA5}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>RabbitMQ.LoadTest</RootNamespace>
-    <AssemblyName>RabbitMQ.LoadTest</AssemblyName>
+    <RootNamespace>RabbitMQ.LoadTest.Subscriber</RootNamespace>
+    <AssemblyName>RabbitMQ.LoadTest.Subscriber</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile>
-    </TargetFrameworkProfile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -23,7 +21,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -33,17 +30,16 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="EasyNetQ">
-      <HintPath>..\packages\EasyNetQ.0.10.0.87\lib\net40\EasyNetQ.dll</HintPath>
+      <HintPath>..\RabbitMQ.LoadTest\packages\EasyNetQ.0.10.0.87\lib\net40\EasyNetQ.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\RabbitMQ.LoadTest\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="RabbitMQ.Client">
-      <HintPath>..\packages\RabbitMQ.Client.3.0.2\lib\net30\RabbitMQ.Client.dll</HintPath>
+      <HintPath>..\RabbitMQ.LoadTest\packages\RabbitMQ.Client.3.0.2\lib\net30\RabbitMQ.Client.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -63,7 +59,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="RabbitMQ.LoadTest.Messages\RabbitMQ.LoadTest.Messages.csproj">
+    <ProjectReference Include="..\RabbitMQ.LoadTest\RabbitMQ.LoadTest.Messages\RabbitMQ.LoadTest.Messages.csproj">
       <Project>{998561aa-a432-4ca6-95c3-11c5325b1475}</Project>
       <Name>RabbitMQ.LoadTest.Messages</Name>
     </ProjectReference>
