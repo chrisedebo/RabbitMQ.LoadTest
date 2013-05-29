@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace RabbitMQ.LoadTest.Messages
 {
-    class XMLMessage
+    public class XMLMessage
     {
-        public string Word { get; set; }
+        public string XMLString { get; set; }
     }
 }

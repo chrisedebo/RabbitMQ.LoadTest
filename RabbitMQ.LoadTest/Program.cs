@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Configuration;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
 using EasyNetQ;
+using RabbitMQ.LoadTest.Messages;
 
 namespace RabbitMQ.LoadTest
 {
@@ -10,15 +13,26 @@ namespace RabbitMQ.LoadTest
     {
         static void Main(string[] args)
         {
-            string host = args.Length > 0 ? args[0] : "localhost";
-            string vhost = args.Length > 1 ? args[1] : "/";
+            string defaulthostport = ConfigurationManager.AppSettings["Host"] + ":" + ConfigurationManager.AppSettings["Port"];
+            string[] hostport = args.Length > 0 ? args[0].Split(':') : defaulthostport.Split(':');
 
-            using (var bus = RabbitHutch.CreateBus(host, 5672 , vhost, "guest", "guest",3, serviceRegister => serviceRegister.Register(serviceProvider => new NullLogger())))
+            string host = hostport[0];
+            ushort port = hostport.Length > 1 ? Convert.ToUInt16(hostport[1]) : Convert.ToUInt16(ConfigurationManager.AppSettings["Port"]);
+
+            string vhost = args.Length > 1 ? args[1] : ConfigurationManager.AppSettings["VHost"];
+            string username = args.Length > 2 ? args[2] : ConfigurationManager.AppSettings["RabbitMQUser"];
+            string password = args.Length > 3 ? args[3] : ConfigurationManager.AppSettings["RabbitMQPassword"];
+
+            using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register(serviceProvider => new NullLogger())))
             {
-                Task.Factory.StartNew(() => Publish(bus));
+                int threads = args.Length > 4 ? Convert.ToInt16(args[4]) : Convert.ToInt16(ConfigurationManager.AppSettings["Threads"]);
+                for (int i = 0; i < threads; i++)
+                {
+                    Task.Factory.StartNew(() => Publish(bus));
+                }
 
-                Console.WriteLine("Publisher Started, Hit any key to cancel");
-                Console.ReadKey();
+                Console.WriteLine("Publisher Started, Hit enter to cancel");
+                Console.ReadLine();
             }
 
         }
@@ -27,7 +41,22 @@ namespace RabbitMQ.LoadTest
         {
             using (var channel = bus.OpenPublishChannel())
             {
-                //TODO: Load Files from DIR and publish
+                Random rnd = new Random();
+                string folderPath = ConfigurationManager.AppSettings["MessageFilePath"];
+
+                while (1 == 1) //Infinte Loop. Keep publishing until program is stopped.
+                {
+                    foreach (string file in Directory.EnumerateFiles(folderPath))
+                    {
+                        //Only Publish 60% of the Messages on each pass. to Randomise load on server
+                        if (rnd.Next(100) <= 60)
+                        {
+                            string contents = File.ReadAllText(file);
+                            channel.Publish(new XMLMessage { XMLString = contents });
+                        }
+                    }
+                    
+                }
             }
         }
     }

@@ -1,27 +1,33 @@
 ﻿using System;
+using System.Configuration;
 using EasyNetQ;
 using RabbitMQ.LoadTest.Messages;
 
 namespace RabbitMQ.LoadTest.Subscriber
-
 {
     class Program
     {
         static void Main(string[] args)
         {
-            //var topic = args.Length > 0 ? args[0] : "#";
-            var topic = "#";
+            string defaulthostport = ConfigurationManager.AppSettings["Host"] + ":" + ConfigurationManager.AppSettings["Port"];
+            string[] hostport = args.Length > 0 ? args[0].Split(':') : defaulthostport.Split(':');
 
-            string host = args.Length > 0 ? args[0] : "localhost";
-            string vhost = args.Length > 1 ? args[1] : "/";
+            string host = hostport[0];
+            ushort port = hostport.Length > 1 ? Convert.ToUInt16(hostport[1]) : Convert.ToUInt16(ConfigurationManager.AppSettings["Port"]);
 
-                using (var bus = RabbitHutch.CreateBus(host, 5672 , vhost, "guest", "guest",3, serviceRegister => serviceRegister.Register(serviceProvider => new NullLogger())))
-                {
-                    bus.Subscribe<XMLMessage>("word_subscriber", topic, message => Console.WriteLine(message.Word));
+            string vhost = args.Length > 1 ? args[1] : ConfigurationManager.AppSettings["VHost"];
+            string username = args.Length > 2 ? args[2] : ConfigurationManager.AppSettings["RabbitMQUser"];
+            string password = args.Length > 3 ? args[3] : ConfigurationManager.AppSettings["RabbitMQPassword"];
 
-                    Console.WriteLine("Subscription Started. Hit any key quit");
-                    Console.ReadKey();
-                }
+            int counter = 0;
+
+            using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register(serviceProvider => new NullLogger())))
+            {
+                bus.Subscribe<XMLMessage>("XML_subscriber", message => Console.WriteLine(counter++)); 
+                //if (counter % 10 = 0)
+                
+                Console.WriteLine("Subscription Started. Hit enter to quit");
+                Console.ReadLine();
             }
         }
     }

@@ -46,6 +46,7 @@
       <HintPath>..\packages\RabbitMQ.Client.3.0.2\lib\net30\RabbitMQ.Client.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -57,13 +58,22 @@
     <Compile Include="NullLogger.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>PublicSettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="RabbitMQ.LoadTest.Messages\RabbitMQ.LoadTest.Messages.csproj">
+    <ProjectReference Include="..\RabbitMQ.LoadTest.Messages\RabbitMQ.LoadTest.Messages.csproj">
       <Project>{998561aa-a432-4ca6-95c3-11c5325b1475}</Project>
       <Name>RabbitMQ.LoadTest.Messages</Name>
     </ProjectReference>
