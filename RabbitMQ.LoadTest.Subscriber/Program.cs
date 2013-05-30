@@ -21,7 +21,7 @@ namespace RabbitMQ.LoadTest.Subscriber
 
             int counter = 0;
 
-            using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register(serviceProvider => new NullLogger())))
+            using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger())))
             {
                 bus.Subscribe<XMLMessage>("XML_subscriber", message => Console.WriteLine(counter++)); 
                 //if (counter % 10 = 0)

@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
     <id>EasyNetQ</id>
-    <version>0.10.0.87</version>
+    <version>0.10.0.88</version>
     <title>EasyNetQ</title>
     <authors>Mike Hadlow,  Chris Edwards,  A Hazelwood</authors>
     <owners>Mike Hadlow,  Chris Edwards,  A Hazelwood</owners>
