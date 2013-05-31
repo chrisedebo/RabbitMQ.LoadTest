@@ -23,43 +23,53 @@ namespace RabbitMQ.LoadTest
             string username = args.Length > 2 ? args[2] : ConfigurationManager.AppSettings["RabbitMQUser"];
             string password = args.Length > 3 ? args[3] : ConfigurationManager.AppSettings["RabbitMQPassword"];
 
-            using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger())))
-            {
-                int threads = args.Length > 4 ? Convert.ToInt16(args[4]) : Convert.ToInt16(ConfigurationManager.AppSettings["Threads"]);
-                for (int i = 0; i < threads; i++)
-                {
-                    string threadno = i.ToString();
-                    Task.Factory.StartNew(() => Publish(bus,threadno));
-                }
+            var tokenSource = new CancellationTokenSource();
+            var token = tokenSource.Token;
 
-                Console.WriteLine("Publisher Started, Hit enter to cancel");
-                Console.ReadLine();
+            int threads = args.Length > 4 ? Convert.ToInt16(args[4]) : Convert.ToInt16(ConfigurationManager.AppSettings["Threads"]);
+
+            Task[] tasks = new Task[threads];
+
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                string threadno = i.ToString();
+                tasks[i] = Task.Factory.StartNew(() => Publish(host, port, vhost, username, password, threadno,token), token);
             }
 
+            Console.WriteLine("Publisher Started, Hit enter to cancel");
+            Console.ReadLine();
+
+            tokenSource.Cancel();
         }
 
-        protected static void Publish(IBus bus,string ThreadNo)
+        protected static void Publish(string host, ushort port, string vhost, string username, string password, string ThreadNo, CancellationToken token)
         {
-            int counter = 0;
-            using (var channel = bus.OpenPublishChannel())
+            using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger())))
             {
-                Random rnd = new Random();
-                string folderPath = ConfigurationManager.AppSettings["MessageFilePath"];
-
-                while (1 == 1) //Infinte Loop. Keep publishing until program is stopped.
+                int counter = 0;
+                using (var channel = bus.OpenPublishChannel())
                 {
-                    foreach (string file in Directory.EnumerateFiles(folderPath))
+                    Random rnd = new Random();
+                    string folderPath = ConfigurationManager.AppSettings["MessageFilePath"];
+
+                    while (1 == 1 && !token.IsCancellationRequested) //Infinte Loop. Keep publishing until program is stopped.
                     {
-                        //Only Publish 60% of the Messages on each pass. to Randomise load on server
-                        if (rnd.Next(100) <= 60)
+                        foreach (string file in Directory.EnumerateFiles(folderPath))
                         {
-                            string contents = File.ReadAllText(file);
-                            channel.Publish(new XMLMessage { XMLString = contents });
-                            counter++;
-                            Console.WriteLine(ThreadNo.ToString() + " - " + counter.ToString());
+                            //Only Publish 80% of the Messages on each pass to Randomise load on server
+                            if (rnd.Next(100) <= 80 && !token.IsCancellationRequested)
+                            {
+                                string contents = File.ReadAllText(file);
+                                channel.Publish(new XMLMessage { XMLString = contents });
+                                counter++;
+                                if (counter % 100 == 0)
+                                    Console.WriteLine(ThreadNo.ToString() + " - " + counter.ToString());
+                            }
+
                         }
                     }
-                    
+
+                    Console.WriteLine("Thread {0} stopped", ThreadNo);
                 }
             }
         }
