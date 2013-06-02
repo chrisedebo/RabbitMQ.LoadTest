@@ -46,17 +46,51 @@ namespace RabbitMQ.LoadTest.Subscriber
             {
                 int counter = 0;
 
-                bus.Subscribe<XMLMessage>("XML_subscriber", message => outputtoconsole(message.XMLString, counter++, threadno));
+                switch (Convert.ToInt32(threadno) % 10)
+                {
+                    case 0:
+                        bus.Subscribe<XMLMessage0>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                    case 1:
+                        bus.Subscribe<XMLMessage1>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                    case 2:
+                        bus.Subscribe<XMLMessage2>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                    case 3:
+                        bus.Subscribe<XMLMessage3>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                    case 4:
+                        bus.Subscribe<XMLMessage4>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                    case 5:
+                        bus.Subscribe<XMLMessage5>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                    case 6:
+                        bus.Subscribe<XMLMessage6>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                    case 7:
+                        bus.Subscribe<XMLMessage7>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                    case 8:
+                        bus.Subscribe<XMLMessage8>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                    case 9:
+                        bus.Subscribe<XMLMessage9>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        break;
+                
+                }
 
                 while (!token.IsCancellationRequested)
                 {
-                    //Wait until cancel signal is sent.
+                   //Wait until cancel signal is sent.
+                    Thread.Sleep(1000);
                 }
                 Console.WriteLine("Thread {0} stopped", threadno);
             }
         }
 
-        static void outputtoconsole(string message, int counter,string threadno)
+        static void outputtoconsole(int counter,string threadno)
         {
             if (counter % 100 == 0) 
                 Console.WriteLine(threadno + "-" + counter.ToString());
