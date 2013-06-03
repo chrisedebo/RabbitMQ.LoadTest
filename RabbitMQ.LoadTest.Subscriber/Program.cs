@@ -45,39 +45,39 @@ namespace RabbitMQ.LoadTest.Subscriber
             using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger())))
             {
                 int counter = 0;
-
+                
                 //Select message type, if anyone has a better way of doing this I'd be interested to hear from you :)
                 switch (Convert.ToInt32(threadno) % 10)
                 {
                     case 0:
-                        bus.Subscribe<XMLMessage0>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage0>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString() + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                     case 1:
-                        bus.Subscribe<XMLMessage1>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage1>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                     case 2:
-                        bus.Subscribe<XMLMessage2>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage2>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                     case 3:
-                        bus.Subscribe<XMLMessage3>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage3>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                     case 4:
-                        bus.Subscribe<XMLMessage4>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage4>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                     case 5:
-                        bus.Subscribe<XMLMessage5>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage5>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                     case 6:
-                        bus.Subscribe<XMLMessage6>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage6>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                     case 7:
-                        bus.Subscribe<XMLMessage7>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage7>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                     case 8:
-                        bus.Subscribe<XMLMessage8>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage8>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                     case 9:
-                        bus.Subscribe<XMLMessage9>("XML_subscriber", message => outputtoconsole(counter++, threadno));
+                        bus.Subscribe<XMLMessage9>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));
                         break;
                 
                 }

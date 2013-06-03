@@ -56,6 +56,8 @@ namespace RabbitMQ.LoadTest
 
         protected static void Publish(string host, ushort port, string vhost, string username, string password, string ThreadNo, string[] files, CancellationToken token)
         {
+            int publisherDelay = Convert.ToInt32(ConfigurationManager.AppSettings["PublisherMessageDelay"]);
+
             using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger())))
             {
                 int counter = 0;
@@ -102,6 +104,7 @@ namespace RabbitMQ.LoadTest
             
                         counter++;
                         if (counter % 100 == 0) Console.WriteLine(ThreadNo.ToString() + " - " + counter.ToString());
+                        Thread.Sleep(rnd.Next(publisherDelay));
                     }
 
                     Console.WriteLine("Thread {0} stopped", ThreadNo);
