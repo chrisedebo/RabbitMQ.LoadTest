@@ -65,6 +65,7 @@ namespace RabbitMQ.LoadTest
 
                     while (!token.IsCancellationRequested) //Infinte Loop. Keep publishing until program is stopped.
                     {
+                        //Select message type, if anyone has a better way of doing this I'd be interested to hear from you :)
                         switch (Convert.ToInt32(ThreadNo) % 10)
                         {
                             case 0:

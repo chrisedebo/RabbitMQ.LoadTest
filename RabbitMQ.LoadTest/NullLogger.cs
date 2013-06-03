@@ -7,6 +7,7 @@ namespace RabbitMQ.LoadTest
     {
         public void DebugWrite(string format, params object[] args)
         {
+            //For Debugging only
             //Console.WriteLine(format, args);
         }
 

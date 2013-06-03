@@ -46,6 +46,7 @@ namespace RabbitMQ.LoadTest.Subscriber
             {
                 int counter = 0;
 
+                //Select message type, if anyone has a better way of doing this I'd be interested to hear from you :)
                 switch (Convert.ToInt32(threadno) % 10)
                 {
                     case 0:
