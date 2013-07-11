@@ -59,12 +59,14 @@ namespace RabbitMQ.LoadTest.Subscriber
 
         protected static void Subscribe(string host, ushort port, string vhost, string username, string password, string threadno, CancellationToken token)
         {
+            int queues = options.queues != 0 ? options.queues : q;
+
             using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger())))
             {
                 int counter = 0;
                 
                 //Select message type, if anyone has a better way of doing this I'd be interested to hear from you :)
-                switch (Convert.ToInt32(threadno) % 10)
+                switch (Convert.ToInt32(threadno) % queues)
                 {
                     case 0:
                         bus.Subscribe<XMLMessage0>("XML_subscriber" + (Convert.ToInt32(threadno) % 10).ToString(), message => outputtoconsole(counter++, threadno));

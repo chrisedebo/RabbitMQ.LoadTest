@@ -73,6 +73,7 @@ namespace RabbitMQ.LoadTest
         protected static void Publish(string host, ushort port, string vhost, string username, string password, string ThreadNo, string[] files, CancellationToken token)
         {
             int publisherDelay = options.delay != 0 ? options.delay : d;
+            int queues = options.queues != 0 ? options.queues : q;
 
             using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger())))
             {
@@ -84,7 +85,7 @@ namespace RabbitMQ.LoadTest
                     while (!token.IsCancellationRequested) //Infinte Loop. Keep publishing until program is stopped.
                     {
                         //Select message type, if anyone has a better way of doing this I'd be interested to hear from you :)
-                        switch (Convert.ToInt32(ThreadNo) % options.queues)
+                        switch (Convert.ToInt32(ThreadNo) % queues)
                         {
                             case 0:
                                 channel.Publish(new XMLMessage0 { XMLString = files[rnd.Next(files.Length)].ToString() });
