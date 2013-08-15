@@ -1,83 +1,126 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
 using EasyNetQ;
 using RabbitMQ.LoadTest.Messages;
-using CommandLine;
-using CommandLine.Text;
 
 namespace RabbitMQ.LoadTest
 {
     class Program
     {
-        protected static Options options = new Options();
-        protected static string hp = ConfigurationManager.AppSettings["Host"] + ":" + ConfigurationManager.AppSettings["Port"];
-        protected static string vh = ConfigurationManager.AppSettings["VHost"];
-        protected static string ru = ConfigurationManager.AppSettings["RabbitMQUser"];
-        protected static string rp = ConfigurationManager.AppSettings["RabbitMQPassword"];
-        protected static string fp = ConfigurationManager.AppSettings["MessageFilePath"];
-        protected static int t = Convert.ToInt32(ConfigurationManager.AppSettings["Threads"]);
-        protected static int q = Convert.ToInt32(ConfigurationManager.AppSettings["Queues"]);
-        protected static int d = Convert.ToInt32(ConfigurationManager.AppSettings["PublisherMessageDelay"]);
+        protected static LoaderOptions options = new LoaderOptions();
+
+        private static MessageLogger logger;
 
         static void Main(string[] args)
         {
             //Parse command line options and quit if invalid.
             if (CommandLine.Parser.Default.ParseArguments(args, options))
             {
-                //Assign command line options or defaults to local variables
-                string[] hostport = options.hostport != null ? options.hostport.Split(':') : hp.ToString().Split(':');
-
-                string host = hostport[0];
-                ushort port = hostport.Length > 1 ? Convert.ToUInt16(hostport[1]) : Convert.ToUInt16(ConfigurationManager.AppSettings["Port"]);
-
-                string vhost = options.vhost != null ? options.vhost : vh;
-                string username = options.username != null ? options.username : ru;
-                string password = options.password != null ? options.password : rp;
-
-                int threads = options.threads != 0 ? options.threads : t;
-
                 //Read message file contents into array for publishing.
-                string folderPath = options.folderpath != null ? options.folderpath : fp;
-                string[] filecontents = new string[Directory.GetFiles(folderPath).Length];
+                string[] filecontents = new string[1];// new string[Directory.GetFiles(options.ActualFolderPath).Length];
                 int filecounter = 0;
 
-                foreach (string file in Directory.EnumerateFiles(folderPath))
+                foreach (string file in Directory.EnumerateFiles(options.ActualFolderPath).Take(1))
                 {
                     filecontents[filecounter] = File.ReadAllText(file);
                     filecounter++;
                 }
-
-                //Set up cancellation token
-                var tokenSource = new CancellationTokenSource();
-                var token = tokenSource.Token;
-
-                //Start Threads
-                Task[] tasks = new Task[threads];
-                for (int i = 0; i < tasks.Length; i++)
+                using (logger = new MessageLogger())
                 {
-                    string threadno = i.ToString();
-                    tasks[i] = Task.Factory.StartNew(() => Publish(host, port, vhost, username, password, threadno, filecontents, token), token);
+                    if (options.useReflection)
+                        DoReflectyPublish(filecontents);
+                    else
+                        DoOriginalPublish(filecontents);
                 }
-
-                Console.WriteLine("Publisher Started, Hit enter to cancel");
-                Console.ReadLine();
-
-                tokenSource.Cancel();
             }
         }
 
-        protected static void Publish(string host, ushort port, string vhost, string username, string password, string ThreadNo, string[] files, CancellationToken token)
+        private static void DoReflectyPublish(string[] filecontents)
         {
-            int publisherDelay = options.delay != 0 ? options.delay : d;
-            int queues = options.queues != 0 ? options.queues : q;
+            //Set up cancellation token
+            var tokenSource = new CancellationTokenSource();
+            var token = tokenSource.Token;
 
-            using (var bus = RabbitHutch.CreateBus(host, port, vhost, username, password, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger())))
+            var utils = new Utils();
+            var tasks = new List<Task>();
+
+            IBus bus;
+            bus = CreateBus();
+            foreach (var message in utils.All.Take(options.ActualQueues))
             {
-                int counter = 0;
+                logger.AddType(message.Name);
+                //bus = CreateBus();
+                var channel = bus.OpenPublishChannel();
+
+                MethodInfo openPublishMethod = channel.GetType().GetMethods().First(x => x.Name == "Publish" && x.GetParameters().Length == 1);
+                MethodInfo closedPublishMethod = openPublishMethod.MakeGenericMethod(message);
+                tasks.Add(Task.Factory.StartNew(() => CreateReflectyPublisher(message, closedPublishMethod, filecontents, channel, token)));
+
+            }
+
+            Console.WriteLine("Reflecting Publisher Started, Hit enter to cancel");
+            Console.ReadLine();
+
+            tokenSource.Cancel();
+            tasks.ForEach(x => x.Wait());
+            bus.Dispose();
+        }
+
+        private static void CreateReflectyPublisher(Type messageType, MethodInfo closedPublishMethod, string[] filecontents, IPublishChannel channel, CancellationToken token)
+        {
+            var rnd = new Random();
+
+            while (!token.IsCancellationRequested) //Infinte Loop. Keep publishing until program is stopped.
+            {
+                var args = new object[1];
+                args[0] = Activator.CreateInstance(messageType);
+                ((BaseMessage) args[0]).XMLString = filecontents[rnd.Next(filecontents.Length)];
+                closedPublishMethod.Invoke(channel, args);
+                logger.Log(messageType.Name);
+            }
+            //var bus = channel.Bus;
+            channel.Dispose();
+            //bus.Dispose();
+        }
+
+
+
+
+        private static void DoOriginalPublish(string[] filecontents)
+        {
+            //Set up cancellation token
+            var tokenSource = new CancellationTokenSource();
+            var token = tokenSource.Token;
+
+            //Start Threads
+            Task[] tasks = new Task[options.ActualThreads];
+            for (int i = 0; i < tasks.Length; i++)
+            {
+                string threadno = i.ToString();
+                logger.AddType(threadno);
+                tasks[i] = Task.Factory.StartNew(() => Publish(threadno, filecontents, token), token);
+            }
+
+            Console.WriteLine("Publisher Started, Hit enter to cancel");
+            Console.ReadLine();
+
+            tokenSource.Cancel();
+            tasks.ToList().ForEach(x => x.Wait());
+        }
+
+        protected static void Publish(string ThreadNo, string[] files, CancellationToken token)
+        {
+            //int publisherDelay = options.delay != 0 ? options.delay : d;
+
+            using (var bus = CreateBus())
+            {
                 using (var channel = bus.OpenPublishChannel())
                 {
                     Random rnd = new Random();
@@ -85,7 +128,7 @@ namespace RabbitMQ.LoadTest
                     while (!token.IsCancellationRequested) //Infinte Loop. Keep publishing until program is stopped.
                     {
                         //Select message type, if anyone has a better way of doing this I'd be interested to hear from you :)
-                        switch (Convert.ToInt32(ThreadNo) % queues)
+                        switch (Convert.ToInt32(ThreadNo) % options.ActualQueues)
                         {
                             case 0:
                                 channel.Publish(new XMLMessage0 { XMLString = files[rnd.Next(files.Length)].ToString() });
@@ -118,57 +161,18 @@ namespace RabbitMQ.LoadTest
                                 channel.Publish(new XMLMessage9 { XMLString = files[rnd.Next(files.Length)].ToString() });
                                 break;
                         }
+                        logger.Log(ThreadNo);
             
-                        counter++;
-                        if (counter % 100 == 0) Console.WriteLine(ThreadNo.ToString() + " - " + counter.ToString());
-                        Thread.Sleep(rnd.Next(publisherDelay));
+                        //Thread.Sleep(rnd.Next(publisherDelay));
                     }
 
                     Console.WriteLine("Thread {0} stopped", ThreadNo);
                 }
             }
         }
-    }
-
-    /// <summary>
-    ///  Define command line options
-    /// </summary>
-    class Options
-    {
-        
-        // AMQP Connection strings not yet implemented
-        //[Option('a', "amqp-connection-string", Required = false, 
-        //    HelpText = "AMQP Connection string.")]
-        //public string AMQP { get; set; }
-
-        [Option('h', "host-port", HelpText = "Rabbit Host to connect to ( and :port optionally)")]
-        public string hostport { get; set; }
-
-        [Option('v', "vhost", HelpText = "Virtual host on Rabbit server to connect to")]
-        public string vhost { get; set; }
-
-        [Option('u', "username", HelpText = "RabbitMQ Username")]
-        public string username { get; set; }
-        
-        [Option('p', "password", HelpText = "RabbitMQ password")]
-        public string password { get; set; }
-
-        [Option('f', "folder-path", HelpText = "Path to the message files to be published")]
-        public string folderpath { get; set; }
-
-        [Option('t', "threads", HelpText = "Number of threads (ideally divisble by number of queues)")]
-        public int threads { get; set; }
-
-        [Option('q', "queues", HelpText = "Number of queues (ideally threads a multiple of queues)")]
-        public int queues { get; set; }
-
-        [Option('d', "delay", HelpText = "Maximum random delay (miliseconds)")]
-        public int delay { get; set; }
-                
-        [HelpOption]
-        public string GetUsage()
+        private static IBus CreateBus()
         {
-            return HelpText.AutoBuild(this, (HelpText current) => HelpText.DefaultParsingErrorsHandler(this, current));
+            return RabbitHutch.CreateBus(options.ActualHost, options.ActualPort, options.ActualVhost, options.ActualUsername, options.ActualPassword, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger()));
         }
     }
 }
