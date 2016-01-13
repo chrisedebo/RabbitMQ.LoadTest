@@ -57,11 +57,10 @@ namespace RabbitMQ.LoadTest
             {
                 logger.AddType(message.Name);
                 //bus = CreateBus();
-                var channel = bus.OpenPublishChannel();
 
-                MethodInfo openPublishMethod = channel.GetType().GetMethods().First(x => x.Name == "Publish" && x.GetParameters().Length == 1);
+                MethodInfo openPublishMethod = bus.GetType().GetMethods().First(x => x.Name == "Publish" && x.GetParameters().Length == 1);
                 MethodInfo closedPublishMethod = openPublishMethod.MakeGenericMethod(message);
-                tasks.Add(Task.Factory.StartNew(() => CreateReflectyPublisher(message, closedPublishMethod, filecontents, channel, token)));
+                tasks.Add(Task.Factory.StartNew(() => CreateReflectyPublisher(message, closedPublishMethod, filecontents, bus, token)));
 
             }
 
@@ -73,7 +72,7 @@ namespace RabbitMQ.LoadTest
             bus.Dispose();
         }
 
-        private static void CreateReflectyPublisher(Type messageType, MethodInfo closedPublishMethod, string[] filecontents, IPublishChannel channel, CancellationToken token)
+        private static void CreateReflectyPublisher(Type messageType, MethodInfo closedPublishMethod, string[] filecontents, IBus channel, CancellationToken token)
         {
             var rnd = new Random();
 
@@ -81,7 +80,7 @@ namespace RabbitMQ.LoadTest
             {
                 var args = new object[1];
                 args[0] = Activator.CreateInstance(messageType);
-                ((BaseMessage) args[0]).XMLString = filecontents[rnd.Next(filecontents.Length)];
+                ((BaseMessage)args[0]).XMLString = filecontents[rnd.Next(filecontents.Length)];
                 closedPublishMethod.Invoke(channel, args);
                 logger.Log(messageType.Name);
             }
@@ -121,50 +120,47 @@ namespace RabbitMQ.LoadTest
 
             using (var bus = CreateBus())
             {
-                using (var channel = bus.OpenPublishChannel())
-                {
-                    Random rnd = new Random();
+                Random rnd = new Random();
 
-                    while (!token.IsCancellationRequested) //Infinte Loop. Keep publishing until program is stopped.
+                while (!token.IsCancellationRequested) //Infinte Loop. Keep publishing until program is stopped.
+                {
+                    //Select message type, if anyone has a better way of doing this I'd be interested to hear from you :)
+                    switch (Convert.ToInt32(ThreadNo) % options.ActualQueues)
                     {
-                        //Select message type, if anyone has a better way of doing this I'd be interested to hear from you :)
-                        switch (Convert.ToInt32(ThreadNo) % options.ActualQueues)
-                        {
-                            case 0:
-                                channel.Publish(new XMLMessage0 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                            case 1:
-                                channel.Publish(new XMLMessage1 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                            case 2:
-                                channel.Publish(new XMLMessage2 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                            case 3:
-                                channel.Publish(new XMLMessage3 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                            case 4:
-                                channel.Publish(new XMLMessage4 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                            case 5:
-                                channel.Publish(new XMLMessage5 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                            case 6:
-                                channel.Publish(new XMLMessage6 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                            case 7:
-                                channel.Publish(new XMLMessage7 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                            case 8:
-                                channel.Publish(new XMLMessage8 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                            case 9:
-                                channel.Publish(new XMLMessage9 { XMLString = files[rnd.Next(files.Length)].ToString() });
-                                break;
-                        }
-                        logger.Log(ThreadNo);
-            
-                        //Thread.Sleep(rnd.Next(publisherDelay));
+                        case 0:
+                            bus.Publish(new XMLMessage0 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
+                        case 1:
+                            bus.Publish(new XMLMessage1 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
+                        case 2:
+                            bus.Publish(new XMLMessage2 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
+                        case 3:
+                            bus.Publish(new XMLMessage3 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
+                        case 4:
+                            bus.Publish(new XMLMessage4 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
+                        case 5:
+                            bus.Publish(new XMLMessage5 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
+                        case 6:
+                            bus.Publish(new XMLMessage6 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
+                        case 7:
+                            bus.Publish(new XMLMessage7 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
+                        case 8:
+                            bus.Publish(new XMLMessage8 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
+                        case 9:
+                            bus.Publish(new XMLMessage9 { XMLString = files[rnd.Next(files.Length)].ToString() });
+                            break;
                     }
+                    logger.Log(ThreadNo);
+
+                    //Thread.Sleep(rnd.Next(publisherDelay));
 
                     Console.WriteLine("Thread {0} stopped", ThreadNo);
                 }
@@ -172,7 +168,11 @@ namespace RabbitMQ.LoadTest
         }
         private static IBus CreateBus()
         {
-            return RabbitHutch.CreateBus(options.ActualHost, options.ActualPort, options.ActualVhost, options.ActualUsername, options.ActualPassword, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger()));
+            //return RabbitHutch.CreateBus(options.ActualHost, options.ActualPort, options.ActualVhost, options.ActualUsername, options.ActualPassword, 3, serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger()));
+            return
+                RabbitHutch.CreateBus(
+                    string.Format("host={0};username={1};password={2};virtualHost={3};persistentMessages=false", options.ActualHost, options.ActualUsername, options.ActualPassword,
+                        options.ActualVhost), serviceRegister => serviceRegister.Register<IEasyNetQLogger>(serviceProvider => new NullLogger()));
         }
     }
 }
